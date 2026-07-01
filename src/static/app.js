@@ -568,6 +568,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+        <button class="share-button" data-activity="${name}" aria-label="Share this activity">
+          📤 Share
+        </button>
       </div>
     `;
 
@@ -587,7 +590,59 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Add click handler for share button
+    const shareButton = activityCard.querySelector(".share-button");
+    shareButton.addEventListener("click", () => {
+      shareActivity(name, details);
+    });
+
     activitiesList.appendChild(activityCard);
+  }
+
+  // Share an activity using the Web Share API or clipboard fallback
+  async function shareActivity(name, details) {
+    const schedule = formatSchedule(details);
+    const spotsLeft = details.max_participants - details.participants.length;
+    const shareText = `Check out "${name}" at Mergington High School!\n\n${details.description}\n\nSchedule: ${schedule}\nSpots available: ${spotsLeft}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${name} – Mergington High School`,
+          text: shareText,
+        });
+      } catch (err) {
+        // User cancelled or share failed – ignore
+        if (err.name !== "AbortError") {
+          console.error("Share failed:", err);
+        }
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        showShareConfirmation(name);
+      } catch (err) {
+        console.error("Clipboard copy failed:", err);
+      }
+    }
+  }
+
+  // Show a brief "Copied!" message near the share button
+  function showShareConfirmation(activityName) {
+    // Find the share button for this activity
+    const shareBtn = document.querySelector(
+      `.share-button[data-activity="${CSS.escape(activityName)}"]`
+    );
+    if (!shareBtn) return;
+
+    const original = shareBtn.textContent;
+    shareBtn.textContent = "✅ Copied!";
+    shareBtn.disabled = true;
+    setTimeout(() => {
+      shareBtn.textContent = original;
+      shareBtn.disabled = false;
+    }, 2000);
   }
 
   // Event listeners for search and filter
