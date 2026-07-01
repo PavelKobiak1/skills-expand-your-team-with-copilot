@@ -593,14 +593,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Add click handler for share button
     const shareButton = activityCard.querySelector(".share-button");
     shareButton.addEventListener("click", () => {
-      shareActivity(name, details);
+      shareActivity(name, details, shareButton);
     });
 
     activitiesList.appendChild(activityCard);
   }
 
   // Share an activity using the Web Share API or clipboard fallback
-  async function shareActivity(name, details) {
+  async function shareActivity(name, details, shareBtn) {
     const schedule = formatSchedule(details);
     const spotsLeft = details.max_participants - details.participants.length;
     const shareText = `Check out "${name}" at Mergington High School!\n\n${details.description}\n\nSchedule: ${schedule}\nSpots available: ${spotsLeft}`;
@@ -621,27 +621,29 @@ document.addEventListener("DOMContentLoaded", () => {
       // Fallback: copy to clipboard
       try {
         await navigator.clipboard.writeText(shareText);
-        showShareConfirmation(name);
+        showShareConfirmation(shareBtn);
       } catch (err) {
         console.error("Clipboard copy failed:", err);
       }
     }
   }
 
-  // Show a brief "Copied!" message near the share button
-  function showShareConfirmation(activityName) {
-    // Find the share button for this activity
-    const shareBtn = document.querySelector(
-      `.share-button[data-activity="${CSS.escape(activityName)}"]`
-    );
+  // Show a brief "Copied!" message on the share button
+  function showShareConfirmation(shareBtn) {
     if (!shareBtn) return;
+
+    // Clear any previous pending reset to avoid race conditions
+    if (shareBtn._shareTimeout) {
+      clearTimeout(shareBtn._shareTimeout);
+    }
 
     const original = shareBtn.textContent;
     shareBtn.textContent = "✅ Copied!";
     shareBtn.disabled = true;
-    setTimeout(() => {
+    shareBtn._shareTimeout = setTimeout(() => {
       shareBtn.textContent = original;
       shareBtn.disabled = false;
+      shareBtn._shareTimeout = null;
     }, 2000);
   }
 
